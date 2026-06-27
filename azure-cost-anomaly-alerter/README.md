@@ -2,7 +2,10 @@
 
 A live dashboard that detects when Azure spending spikes above normal patterns, explains *why* it happened, and tells engineers exactly what to do about it — in plain English.
 
-**Live demo:** [yourusername.github.io/azure-cost-anomaly-alerter](https://yourusername.github.io/azure-cost-anomaly-alerter)
+**Live demo:** [headspace222.github.io/cloud-cost-anomaly-alerter](https://headspace222.github.io/git add .
+git commit -m "update"
+git push
+)
 
 ---
 
@@ -57,7 +60,7 @@ Cost Management API  ──►  Anomaly detection logic
 ## Repository structure
 
 ```
-azure-cost-anomaly-alerter/
+cloud-cost-anomaly-alerter/
 ├── index.html                        # Static dashboard (GitHub Pages)
 ├── infra/
 │   └── main.bicep                    # IaC — deploys Function App + Storage
@@ -126,7 +129,7 @@ Or push to `main` — the GitHub Actions workflow deploys automatically.
 
 Repo → Settings → Pages → Source: GitHub Actions
 
-Your dashboard goes live at `https://yourusername.github.io/azure-cost-anomaly-alerter`
+Your dashboard goes live at `https://headspace222.github.io/cloud-cost-anomaly-alerter`
 
 ### Step 5 — Point the dashboard at your live data
 
@@ -135,7 +138,7 @@ In `index.html`, find the `loadLiveData()` function and update the fetch path if
 ```bash
 az storage cors add \
   --methods GET \
-  --origins "https://yourusername.github.io" \
+  --origins "https://headspace222.github.io" \
   --services b \
   --account-name <your-storage-account-name>
 ```

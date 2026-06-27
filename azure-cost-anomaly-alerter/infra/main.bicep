@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// azure-cost-anomaly-alerter — infrastructure
+// cloud-cost-anomaly-alerter — infrastructure
 // Deploys: Storage Account, App Service Plan, Function App
 // Region:  UK South (data residency)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@ var containerName    = 'dashboarddata'
 
 var commonTags = {
   Environment:  environment
-  Project:      'azure-cost-anomaly-alerter'
+  Project:      'cloud-cost-anomaly-alerter'
   ManagedBy:    'Bicep'
   CostCentre:   'Engineering'
 }
