@@ -1,7 +1,0 @@
-[azure-functions]
-azure-functions==1.18.0
-
-[azure-sdk]
-azure-identity==1.16.0
-azure-mgmt-costmanagement==4.0.1
-azure-storage-blob==12.19.1
