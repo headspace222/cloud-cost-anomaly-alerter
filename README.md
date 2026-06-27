@@ -1,11 +1,8 @@
-# Azure Cost Anomaly Alerter
+# Cloud Cost Anomaly Alerter
 
-A live dashboard that detects when Azure spending spikes above normal patterns, explains *why* it happened, and tells engineers exactly what to do about it — in plain English.
+A live dashboard that detects when Azure spending spikes above normal patterns, explains *why* it happened, and tells engineers exactly what to do about it - in plain English.
 
-**Live demo:** [headspace222.github.io/cloud-cost-anomaly-alerter](https://headspace222.github.io/git add .
-git commit -m "update"
-git push
-)
+**Live demo:** [headspace222.github.io/cloud-cost-anomaly-alerter](https://headspace222.github.io/cloud-cost-anomaly-alerter/)
 
 ---
 
@@ -15,19 +12,19 @@ Every organisation running Azure has the same conversation in their monthly engi
 
 > *"Why did our Azure bill go up 40% last month — and why did nobody notice until the invoice arrived?"*
 
-Azure Cost Management shows you spending. It does not tell you which specific resource caused a spike, why it happened, or what to do about it. This tool does.
+Azure Cost Management shows you your spending. It does not tell you which specific resource caused a spike, why it happened, or what to do about it. This tool does.
 
 ---
 
 ## What it does
 
-- Fetches 30 days of daily spend per resource group from the Azure Cost Management API
-- Detects anomalies using a rolling 7-day average baseline — any day more than 1.8× the average is flagged
-- Explains each anomaly in plain English with the likely root cause
-- Provides the exact Azure CLI remediation command for each finding
-- Projects month-end spend per resource group vs budget
-- Sends a Slack or Teams alert when a new anomaly is detected
-- Displays everything on a live public dashboard — no login required
+- Fetches 30 days of daily spend per resource group from the Azure Cost Management API.
+- Detects anomalies using a rolling 7-day average baseline - any day more than 1.8× the average is flagged.
+- Explains each anomaly in plain English with the likely root cause.
+- Provides the exact Azure CLI remediation command for each finding.
+- Projects month-end spend per resource group vs budget.
+- Sends a Slack or Teams alert when a new anomaly is detected.
+- Displays everything on a live public dashboard - no login required.
 
 ---
 
@@ -50,10 +47,10 @@ Cost Management API  ──►  Anomaly detection logic
 ```
 
 **Why this architecture:**
-- Zero always-on compute cost — Function runs once daily on consumption plan
-- No database — spend.json in blob storage is the entire data layer
-- No backend server — dashboard is a static file served by GitHub Pages
-- Managed identity on the Function App — no stored credentials anywhere
+- Zero always-on compute cost - Function runs once daily on the consumption plan.
+- No database - spend.json in blob storage is the entire data layer.
+- No backend server - dashboard is a static file served by GitHub Pages.
+- Managed identity on the Function App - no stored credentials anywhere.
 
 ---
 
@@ -123,9 +120,9 @@ pip install -r requirements.txt
 func azure functionapp publish <your-function-app-name>
 ```
 
-Or push to `main` — the GitHub Actions workflow deploys automatically.
+Or push to `main` - the GitHub Actions workflow deploys automatically.
 
-### Step 4 — Enable GitHub Pages
+### Step 4 - Enable GitHub Pages
 
 Repo → Settings → Pages → Source: GitHub Actions
 
@@ -169,10 +166,10 @@ The threshold is configurable via the `ANOMALY_THRESHOLD` environment variable. 
 | Control | Implementation |
 |---|---|
 | No stored credentials | Function App uses system-assigned managed identity |
-| Least-privilege RBAC | Identity granted `Cost Management Reader` only — cannot modify resources |
+| Least-privilege RBAC | Identity granted `Cost Management Reader` only - cannot modify resources |
 | HTTPS only | Enforced on Function App and Storage Account |
 | TLS 1.2 minimum | Enforced on all resources |
-| No public IP on Function | Consumption plan — no inbound exposure |
+| No public IP on Function | Consumption plan - no inbound exposure |
 
 ---
 
@@ -180,7 +177,7 @@ The threshold is configurable via the `ANOMALY_THRESHOLD` environment variable. 
 
 | Resource | Monthly cost |
 |---|---|
-| Azure Function (Consumption plan) | Free — well within 1M free executions/month |
+| Azure Function (Consumption plan) | Free - well within 1M free executions/month |
 | Storage Account (LRS, Hot) | ~£0.02/month for spend.json |
 | Blob egress (dashboard reads) | Negligible |
 | **Total** | **~£0.02/month** |
@@ -189,29 +186,29 @@ The threshold is configurable via the `ANOMALY_THRESHOLD` environment variable. 
 
 ## What I would add with more time
 
-- **Azure Monitor integration** — correlate cost spikes with deployment events from Activity Log
-- **Per-resource drill-down** — identify the specific VM, disk, or service driving the spike, not just the resource group
-- **Budget management** — create and update budgets via the dashboard, not just read them
-- **Historical anomaly log** — track anomalies over time to identify recurring patterns
-- **Microsoft Sentinel integration** — cross-reference cost anomalies with security events
+- **Azure Monitor integration** - correlate cost spikes with deployment events from Activity Log.
+- **Per-resource drill-down** - identify the specific VM, disk, or service driving the spike, not just the resource group.
+- **Budget management** - create and update budgets via the dashboard, not just read them.
+- **Historical anomaly log** - track anomalies over time to identify recurring patterns.
+- **Microsoft Sentinel integration** - cross-reference cost anomalies with security events.
 
 ---
 
 ## Technologies used
 
-- Azure Cost Management API
-- Azure Functions (Python, timer trigger)
-- Azure Blob Storage
-- Azure Managed Identity + RBAC
-- Bicep (Infrastructure as Code)
+- Azure Cost Management API.
+- Azure Functions (Python, timer trigger).
+- Azure Blob Storage.
+- Azure Managed Identity + RBAC.
+- Bicep (Infrastructure as Code).
 - Chart.js
-- GitHub Actions (CI/CD)
-- GitHub Pages (static hosting)
+- GitHub Actions (CI/CD).
+- GitHub Pages (static hosting).
 
 ---
 
-## Author
+## Author: Jane Ologhadien
 
-Built as part of an Azure cloud engineering portfolio targeting financial services organisations. Demonstrates IaC, serverless architecture, managed identity, least-privilege RBAC, and FinOps thinking.
+
 
 [LinkedIn](https://linkedin.com/in/yourprofile) | [Portfolio](https://yoursite.dev)
