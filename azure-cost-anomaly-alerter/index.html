@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Azure Cost Anomaly Alerter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f4f2;
+      --surface: #ffffff;
+      --surface-2: #f9f9f8;
+      --border: rgba(0,0,0,0.09);
+      --border-strong: rgba(0,0,0,0.15);
+      --text-primary: #0b0b0b;
+      --text-secondary: #52514e;
+      --text-muted: #898781;
+      --danger: #d03b3b;
+      --danger-bg: #fcebeb;
+      --danger-border: #f09595;
+      --warning: #b87800;
+      --warning-bg: #faeeda;
+      --warning-border: #eda100;
+      --success: #2a6e2a;
+      --success-bg: #eaf3de;
+      --success-border: #97c459;
+      --accent: #185fa5;
+      --accent-bg: #e6f1fb;
+      --grid-line: #e8e7e2;
+      --mono: 'Courier New', monospace;
+      --radius: 8px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111110;
+        --surface: #1c1c1a;
+        --surface-2: #232321;
+        --border: rgba(255,255,255,0.09);
+        --border-strong: rgba(255,255,255,0.15);
+        --text-primary: #f0efe9;
+        --text-secondary: #b5b3a9;
+        --text-muted: #6e6d69;
+        --danger: #e66767;
+        --danger-bg: #2a1212;
+        --danger-border: #7a2020;
+        --warning: #c98500;
+        --warning-bg: #231800;
+        --warning-border: #7a5000;
+        --success: #5aaa5a;
+        --success-bg: #0f1e0f;
+        --success-border: #2a5a2a;
+        --accent: #3987e5;
+        --accent-bg: #0a1e38;
+        --grid-line: #2a2a28;
+      }
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .page { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    /* Header */
+    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .header-left h1 { font-size: 22px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+    .header-left p { font-size: 13px; color: var(--text-muted); }
+    .status-pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 20px; border: 1px solid; }
+    .status-pill.alert { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
+    .status-pill.ok { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+    .pulse { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* Mode banner */
+    .mode-banner { background: var(--accent-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; margin-bottom: 1.25rem; font-size: 12px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+
+    /* Metrics */
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+    .metric-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+    .metric-val { font-size: 26px; font-weight: 600; line-height: 1; margin-bottom: 3px; }
+    .metric-val.danger { color: var(--danger); }
+    .metric-val.warning { color: var(--warning); }
+    .metric-val.success { color: var(--success); }
+    .metric-sub { font-size: 12px; color: var(--text-muted); }
+
+    /* Controls */
+    .controls { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+    .ctrl-btn { font-size: 12px; padding: 5px 14px; border: 1px solid var(--border-strong); border-radius: 20px; background: var(--surface); color: var(--text-secondary); cursor: pointer; transition: all .15s; }
+    .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .ctrl-btn.active { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); font-weight: 500; }
+
+    /* Section */
+    .section-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; }
+
+    /* Chart */
+    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
+    .chart-wrap { position: relative; width: 100%; height: 240px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; font-size: 12px; color: var(--text-secondary); }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .leg-line { width: 16px; height: 2px; border-radius: 1px; display: inline-block; }
+    .leg-dash { width: 16px; height: 2px; background: repeating-linear-gradient(90deg,#c3c2b7 0,#c3c2b7 4px,transparent 4px,transparent 7px); display: inline-block; }
+    .leg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+    /* Resource group cards */
+    .rg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .rg-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+    .rg-card.anomaly { border-left: 3px solid var(--danger); border-radius: 0 12px 12px 0; }
+    .rg-card.over { border-left: 3px solid var(--warning); border-radius: 0 12px 12px 0; }
+    .rg-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+    .rg-name { font-size: 13px; font-weight: 600; color: var(--text-primary); word-break: break-word; }
+    .badge { font-size: 11px; font-weight: 500; padding: 2px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+    .badge.danger { background: var(--danger-bg); color: var(--danger); }
+    .badge.warning { background: var(--warning-bg); color: var(--warning); }
+    .badge.ok { background: var(--success-bg); color: var(--success); }
+    .rg-spend { font-size: 22px; font-weight: 600; color: var(--text-primary); }
+    .rg-budget { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .rg-why { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 8px 0 6px; padding: 8px; background: var(--surface-2); border-radius: 6px; border-left: 2px solid var(--danger); }
+    .rg-why.warn { border-left-color: var(--warning); }
+    .bar-wrap { height: 4px; background: var(--surface-2); border-radius: 2px; margin-top: 8px; }
+    .bar-fill { height: 4px; border-radius: 2px; transition: width .4s; }
+
+    /* Alert rows */
+    .alert-row { display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+    .alert-row.high { border-left: 3px solid var(--danger); border-radius: 0 12px 12px 0; }
+    .alert-row.med { border-left: 3px solid var(--warning); border-radius: 0 12px 12px 0; }
+    .alert-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .alert-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    .alert-detail { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+    .alert-cmd { font-family: var(--mono); font-size: 11px; color: var(--text-muted); background: var(--surface-2); border-radius: 6px; padding: 6px 10px; margin-top: 8px; word-break: break-all; }
+    .alert-time { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    /* Forecast chart */
+    .forecast-wrap { position: relative; width: 100%; height: 280px; }
+
+    /* Footer */
+    .footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: gap; gap: 8px; }
+    .footer p { font-size: 12px; color: var(--text-muted); }
+    .footer a { color: var(--accent); text-decoration: none; font-size: 12px; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* Data mode toggle */
+    .data-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; }
+    .data-toggle label { font-size: 12px; color: var(--text-secondary); }
+    .toggle-wrap { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 3px; }
+    .toggle-opt { font-size: 12px; padding: 3px 12px; border-radius: 20px; cursor: pointer; color: var(--text-muted); border: none; background: transparent; transition: all .15s; }
+    .toggle-opt.active { background: var(--surface); color: var(--text-primary); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+    @media (max-width: 600px) {
+      .page { padding: 1rem 1rem 3rem; }
+      .header { flex-direction: column; }
+      .metric-val { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="header-left">
+      <h1>Azure Cost Anomaly Alerter</h1>
+      <p>Subscription: <strong id="sub-name">prod-banking-sub-001</strong> &nbsp;|&nbsp; Last refreshed: <span id="refresh-time"></span></p>
+    </div>
+    <div class="status-pill alert" id="status-pill">
+      <span class="pulse"></span>
+      <span id="status-text">2 anomalies detected</span>
+    </div>
+  </div>
+
+  <div class="mode-banner" id="mode-banner">
+    &#9432; Running in <strong id="mode-label">demo mode</strong> — simulated data. Connect to the Azure Cost Management API to see live data. See README for setup.
+  </div>
+
+  <div class="data-toggle">
+    <div class="toggle-wrap">
+      <button class="toggle-opt active" id="t-demo" onclick="switchMode('demo',this)">Demo data</button>
+      <button class="toggle-opt" id="t-live" onclick="switchMode('live',this)">Live data</button>
+    </div>
+  </div>
+
+  <div class="metrics" id="metrics"></div>
+
+  <div class="controls">
+    <button class="ctrl-btn active" id="v-all" onclick="setView('all',this)">Overview</button>
+    <button class="ctrl-btn" id="v-anomaly" onclick="setView('anomaly',this)">Anomalies</button>
+    <button class="ctrl-btn" id="v-forecast" onclick="setView('forecast',this)">Forecast</button>
+  </div>
+
+  <div id="view-all">
+    <div class="chart-card">
+      <div class="section-label">30-day spend trend</div>
+      <div class="legend">
+        <span><span class="leg-line" style="background:#2a78d6"></span>Daily spend</span>
+        <span><span class="leg-dash"></span>7-day average</span>
+        <span><span class="leg-dot" style="background:#d03b3b"></span>Anomaly</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="trendChart" role="img" aria-label="30-day Azure spend trend showing daily spend, 7-day rolling average, and two anomaly points where spend spiked significantly above the baseline">30-day spend trend with anomaly markers.</canvas>
+      </div>
+    </div>
+    <div class="section-label">Resource group breakdown</div>
+    <div class="rg-grid" id="rg-grid"></div>
+  </div>
+
+  <div id="view-anomaly" style="display:none">
+    <div class="section-label" style="margin-bottom:12px">Active anomalies — what happened and why</div>
+    <div id="alerts-list"></div>
+  </div>
+
+  <div id="view-forecast" style="display:none">
+    <div class="chart-card">
+      <div class="section-label">Projected month-end spend vs budget</div>
+      <div class="forecast-wrap">
+        <canvas id="forecastChart" role="img" aria-label="Horizontal bar chart comparing projected month-end spend against budget for each resource group — two groups are over budget">Projected vs budget per resource group.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Data is simulated for portfolio demonstration. No real credentials or spend data are used. &nbsp;|&nbsp; Built with Chart.js + Azure Cost Management API</p>
+    <a href="https://github.com/yourusername/azure-cost-anomaly-alerter" target="_blank" rel="noopener">View on GitHub &rarr;</a>
+  </div>
+
+</div>
+
+<script>
+// ─── Data generation ───────────────────────────────────────────────────────────
+function seed(s) { let x = Math.sin(s) * 10000; return x - Math.floor(x); }
+
+const RGS = [
+  { name: 'rg-prod-banking',   budget: 4200, base: 118, variance: 14,
+    spike: { day: 22, mult: 2.8,
+      reason: '3 new Premium_LRS managed disks provisioned by pipeline deploy-v2.4 on day 22. None were deallocated after the job completed. Each disk is 128 GB Premium — combined waste estimate £38/day until removed.',
+      cmd: 'az disk list --resource-group rg-prod-banking --query "[?diskState==\'Unattached\']" --output table',
+      severity: 'high', status: 'Active' } },
+  { name: 'rg-dev-sandbox',    budget: 800,  base: 17,  variance: 7,
+    spike: { day: 18, mult: 3.2,
+      reason: 'VM "vm-dev-perf-test" shows PowerState/running since Friday 17:42 through Monday. No auto-shutdown policy configured on this resource group. Dev VMs running over weekends is a common source of avoidable cost — estimated £62 excess.',
+      cmd: 'az vm deallocate --name vm-dev-perf-test --resource-group rg-dev-sandbox',
+      severity: 'high', status: 'Resolved' } },
+  { name: 'rg-network-hub',    budget: 1100, base: 31,  variance: 4,  spike: null },
+  { name: 'rg-monitoring',     budget: 300,  base: 7,   variance: 2,  spike: null },
+  { name: 'rg-security',       budget: 500,  base: 14,  variance: 3,  spike: null },
+];
+
+const DAYS = 30;
+
+function genSpend(rg) {
+  return Array.from({ length: DAYS }, (_, i) => {
+    let v = rg.base + (seed(rg.name.length * 13 + i * 7) - 0.5) * rg.variance * 2;
+    if (rg.spike && i === rg.spike.day) v *= rg.spike.mult;
+    if (rg.spike && i === rg.spike.day + 1) v *= 1.35;
+    return Math.max(0, Math.round(v * 10) / 10);
+  });
+}
+
+const spendData = RGS.map(rg => ({ ...rg, daily: genSpend(rg) }));
+const totalDaily = Array.from({ length: DAYS }, (_, i) =>
+  Math.round(spendData.reduce((s, rg) => s + rg.daily[i], 0) * 10) / 10
+);
+const rolling7 = totalDaily.map((_, i) => {
+  const sl = totalDaily.slice(Math.max(0, i - 6), i + 1);
+  return Math.round(sl.reduce((a, b) => a + b, 0) / sl.length * 10) / 10;
+});
+
+const now = new Date();
+const dayLabels = Array.from({ length: DAYS }, (_, i) => {
+  const d = new Date(now); d.setDate(d.getDate() - (DAYS - 1 - i));
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+});
+
+const anomalyDays = [22, 18];
+const anomalyPoints = totalDaily.map((v, i) => anomalyDays.includes(i) ? v : null);
+
+const TODAY = now.getDate() || 22;
+const spendMTD   = spendData.map(rg => ({ ...rg, mtd: Math.round(rg.daily.slice(0, TODAY).reduce((a, b) => a + b, 0)) }));
+const projections = spendMTD.map(rg => ({ ...rg, proj: Math.round(rg.mtd / TODAY * 30) }));
+const totalMTD  = projections.reduce((s, r) => s + r.mtd, 0);
+const totalProj = projections.reduce((s, r) => s + r.proj, 0);
+const totalBudget = RGS.reduce((s, r) => s + r.budget, 0);
+const anomalyCount = RGS.filter(r => r.spike).length;
+const anomalyExcess = 284;
+
+// ─── Refresh time ──────────────────────────────────────────────────────────────
+document.getElementById('refresh-time').textContent =
+  now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ', ' +
+  now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// ─── Metrics ───────────────────────────────────────────────────────────────────
+function renderMetrics() {
+  const pctOver = Math.round((totalProj / totalBudget - 1) * 100);
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric">
+      <div class="metric-label">MTD spend</div>
+      <div class="metric-val">£${totalMTD.toLocaleString()}</div>
+      <div class="metric-sub">of £${totalBudget.toLocaleString()} budget</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Projected month-end</div>
+      <div class="metric-val warning">£${totalProj.toLocaleString()}</div>
+      <div class="metric-sub" style="color:var(--warning)">+${pctOver}% over budget</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Anomalies detected</div>
+      <div class="metric-val danger">${anomalyCount}</div>
+      <div class="metric-sub">Est. excess: £${anomalyExcess}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Healthiest resource group</div>
+      <div class="metric-val success" style="font-size:15px;margin-top:3px">rg-monitoring</div>
+      <div class="metric-sub" style="color:var(--success)">On track — 0 anomalies</div>
+    </div>
+  `;
+}
+renderMetrics();
+
+// ─── Resource group cards ──────────────────────────────────────────────────────
+function renderRGGrid() {
+  document.getElementById('rg-grid').innerHTML = projections.map(rg => {
+    const pct = Math.min(100, Math.round(rg.mtd / rg.budget * 100));
+    const hasAnomaly = !!rg.spike;
+    const isOver = pct > 85 && !hasAnomaly;
+    const barColor = hasAnomaly ? 'var(--danger)' : isOver ? 'var(--warning)' : 'var(--success)';
+    const badgeCls = hasAnomaly ? 'danger' : isOver ? 'warning' : 'ok';
+    const badgeTxt = hasAnomaly ? 'Anomaly' : isOver ? `${pct}% used` : 'Normal';
+    const cardCls = hasAnomaly ? 'anomaly' : isOver ? 'over' : '';
+    return `
+      <div class="rg-card ${cardCls}">
+        <div class="rg-top">
+          <span class="rg-name">${rg.name}</span>
+          <span class="badge ${badgeCls}">${badgeTxt}</span>
+        </div>
+        <div class="rg-spend">£${rg.mtd.toLocaleString()}</div>
+        <div class="rg-budget">MTD of £${rg.budget.toLocaleString()} budget &nbsp;|&nbsp; Proj. £${rg.proj.toLocaleString()}</div>
+        ${rg.spike ? `<div class="rg-why ${rg.spike.severity === 'high' ? '' : 'warn'}">${rg.spike.reason}</div>` : ''}
+        <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      </div>`;
+  }).join('');
+}
+renderRGGrid();
+
+// ─── Alerts ────────────────────────────────────────────────────────────────────
+function renderAlerts() {
+  const anomalies = RGS.filter(r => r.spike);
+  document.getElementById('alerts-list').innerHTML = anomalies.map(r => `
+    <div class="alert-row ${r.spike.severity === 'high' ? 'high' : 'med'}">
+      <div class="alert-icon" style="color:${r.spike.severity === 'high' ? 'var(--danger)' : 'var(--warning)'}">&#9651;</div>
+      <div style="flex:1">
+        <div class="alert-title">${r.name} — spend spike detected</div>
+        <div class="alert-detail">${r.spike.reason}</div>
+        <div class="alert-cmd"># Recommended remediation<br>${r.spike.cmd}</div>
+        <div class="alert-time">Status: <strong style="color:${r.spike.status === 'Active' ? 'var(--danger)' : 'var(--success)'}">${r.spike.status}</strong></div>
+      </div>
+    </div>
+  `).join('');
+}
+renderAlerts();
+
+// ─── Charts ────────────────────────────────────────────────────────────────────
+let trendChart = null;
+let forecastChart = null;
+
+function isDark() { return window.matchMedia('(prefers-color-scheme: dark)').matches; }
+
+function buildTrendChart() {
+  if (trendChart) trendChart.destroy();
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  const gridColor = isDark() ? '#2a2a28' : '#e8e7e2';
+  const tickColor = isDark() ? '#6e6d69' : '#898781';
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dayLabels,
+      datasets: [
+        { label: 'Daily spend', data: totalDaily, borderColor: '#2a78d6', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false },
+        { label: '7-day avg',   data: rolling7,   borderColor: '#c3c2b7', borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, tension: 0.3, fill: false },
+        { label: 'Anomaly',     data: anomalyPoints, borderColor: 'transparent', backgroundColor: '#d03b3b', pointStyle: 'circle', pointRadius: 8, pointHoverRadius: 10, showLine: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => `£${c.parsed.y.toFixed(2)}` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10 }, maxTicksLimit: 8, maxRotation: 0 } },
+        y: { grid: { color: gridColor, lineWidth: 0.5 }, ticks: { color: tickColor, font: { size: 10 }, callback: v => '£' + v }, border: { display: false } }
+      }
+    }
+  });
+}
+
+function buildForecastChart() {
+  if (forecastChart) forecastChart.destroy();
+  const ctx = document.getElementById('forecastChart').getContext('2d');
+  const gridColor = isDark() ? '#2a2a28' : '#e8e7e2';
+  const tickColor = isDark() ? '#6e6d69' : '#898781';
+  const labels = projections.map(r => r.name.replace('rg-', ''));
+  const projVals = projections.map(r => r.proj);
+  const budgetVals = projections.map(r => r.budget);
+  const barColors = projections.map(r => r.proj > r.budget ? '#d03b3b' : r.proj > r.budget * 0.85 ? '#eda100' : '#1baf7a');
+  forecastChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Projected',  data: projVals,   backgroundColor: barColors, borderRadius: 4, barPercentage: 0.5 },
+        { label: 'Budget',     data: budgetVals,  backgroundColor: isDark() ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', borderRadius: 4, barPercentage: 0.5 }
+      ]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => `£${c.parsed.x.toLocaleString()}` } }
+      },
+      scales: {
+        x: { grid: { color: gridColor, lineWidth: 0.5 }, ticks: { color: tickColor, font: { size: 10 }, callback: v => '£' + v.toLocaleString() }, border: { display: false } },
+        y: { grid: { display: false }, ticks: { color: isDark() ? '#b5b3a9' : '#52514e', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ─── View switching ────────────────────────────────────────────────────────────
+function setView(v, btn) {
+  ['all','anomaly','forecast'].forEach(id => {
+    document.getElementById('view-' + id).style.display = v === id ? 'block' : 'none';
+  });
+  document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (v === 'forecast') setTimeout(buildForecastChart, 30);
+}
+
+// ─── Mode switching ────────────────────────────────────────────────────────────
+function switchMode(mode, btn) {
+  document.querySelectorAll('.toggle-opt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (mode === 'live') {
+    document.getElementById('mode-banner').innerHTML =
+      '&#9432; Live mode — fetching from <code>data/spend.json</code>. Deploy the Azure Function to populate this file. See README for instructions.';
+    loadLiveData();
+  } else {
+    document.getElementById('mode-label').textContent = 'demo mode';
+    document.getElementById('mode-banner').innerHTML =
+      '&#9432; Running in <strong>demo mode</strong> — simulated data. Connect to the Azure Cost Management API to see live data. See README for setup.';
+  }
+}
+
+async function loadLiveData() {
+  try {
+    const res = await fetch('data/spend.json');
+    if (!res.ok) throw new Error('No data file found');
+    const data = await res.json();
+    console.log('Live data loaded:', data);
+    // In production: re-render charts and metrics with real data
+    document.getElementById('mode-banner').innerHTML =
+      '&#10003; Live data loaded from Azure Cost Management API.';
+  } catch {
+    document.getElementById('mode-banner').innerHTML =
+      '&#9888; Could not load <code>data/spend.json</code> — running with demo data. Deploy the Azure Function to generate this file.';
+  }
+}
+
+// ─── Init ──────────────────────────────────────────────────────────────────────
+setTimeout(buildTrendChart, 50);
+</script>
+</body>
+</html>

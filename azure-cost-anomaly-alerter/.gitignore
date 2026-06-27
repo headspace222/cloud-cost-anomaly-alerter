@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.python_packages/
+venv/
+.venv/
+*.egg-info/
+
+# Azure Functions local settings (contains secrets — never commit)
+function/local.settings.json
+
+# Environment files
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Build outputs
+dist/
+build/
+
+# Generated data (produced by the function at runtime)
+data/spend.json
